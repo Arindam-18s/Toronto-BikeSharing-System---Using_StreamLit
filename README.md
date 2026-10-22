@@ -55,8 +55,8 @@ helpers.py   →  API clients, data joins, geocoding, routing, station selection
 ## Run Locally
 
 ```bash
-git clone https://github.com/your-user/bike-share-app.git
-cd bike-share-app
+git clone https://github.com/Arindam-18s/Toronto-BikeSharing-System---Using_StreamLit
+cd Toronto-BikeSharing-System---Using_StreamLit
 
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
@@ -82,7 +82,7 @@ you and the map tiles may not render.
 ## Deploy to Streamlit Community Cloud
 
 1. Push this repo to GitHub (make sure `.streamlit/secrets.toml` is
-   gitignored — **never commit API keys**).
+   gitignored).
 2. Go to <https://share.streamlit.io> → **New app** → point it at your repo,
    branch `main`, main file `app.py`.
 3. Under **Settings → Secrets**, paste:
