@@ -96,29 +96,20 @@ you and the map tiles may not render.
 
 ---
 
-## Running Tests
+## Deploy to Streamlit Community Cloud
 
-```bash
-pip install -r requirements.txt pytest
-pytest tests/ -v
-```
+1. Push this repo to GitHub (make sure `.streamlit/secrets.toml` is
+   gitignored — **never commit API keys**).
+2. Go to <https://share.streamlit.io> → **New app** → point it at your repo,
+   branch `main`, main file `app.py`.
+3. Under **Settings → Secrets**, paste:
 
-The suite covers station selection (bike + dock), marker color logic, and the
-nearest-stations table sort. `conftest.py` at the project root adds the repo
-to `sys.path` so `from helpers import ...` resolves correctly under pytest on
-any OS.
+   ```toml
+   CARTO_API_KEY = "your_key_here"
+   ```
 
-Expected output:
-
-```
-tests/test_helpers.py::test_marker_color PASSED
-tests/test_helpers.py::test_nearest_bike PASSED
-tests/test_helpers.py::test_ebike_only PASSED
-tests/test_helpers.py::test_nearest_dock PASSED
-tests/test_helpers.py::test_no_ebikes_raises PASSED
-tests/test_helpers.py::test_nearest_stations_table PASSED
-========== 6 passed ==========
-```
+4. Deploy. Test both **Rent** and **Return** flows end-to-end on the live URL
+   before sharing it.
 
 ---
 
@@ -135,4 +126,4 @@ tests/test_helpers.py::test_nearest_stations_table PASSED
 
 ## License
 
-MIT © 2026 Arindam S
+MIT @2026
