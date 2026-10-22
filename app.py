@@ -1,6 +1,8 @@
 import streamlit as st
 import folium
 from streamlit_folium import folium_static
+from geopy.distance import geodesic
+
 from helpers import (
     query_station_status,
     get_station_latlon,
@@ -12,9 +14,9 @@ from helpers import (
     get_marker_color,
 )
 
-# ---------- Page config ----------
+# ---------- Page config (must be the first Streamlit call) ----------
 st.set_page_config(
-    page_title="Toronto Bike-Share Finder",
+    page_title="Toronto Bike-Sharing System",
     page_icon="🚲",
     layout="wide",
 )
@@ -26,8 +28,8 @@ LATLON_URL = "https://tor.publicbikesystem.net/ube/gbfs/v1/en/station_informatio
 DEFAULT_ZOOM_CITY = 13
 DEFAULT_ZOOM_STREET = 16
 MAP_ATTR = (
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> '
-    'contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    '&copy; <a href="https://www.openstreetmap.org/copyright">Arindam</a> '
+    'S <a href="https://carto.com/attributions">@Sept-2026</a>'
 )
 
 CARTO_API_KEY = st.secrets.get("CARTO_API_KEY", "")
@@ -52,11 +54,24 @@ def load_data():
         return None
 
 
-# ---------- Map builder ----------
-def build_map(center, zoom, data, user_location=None, station_location=None,
-              station_popup="", route_coords=None, route_tooltip=""):
-    m = folium.Map(location=center, zoom_start=zoom, tiles=TILES_URL,
-                   attr=MAP_ATTR, max_zoom=20)
+# ---------- Map builder (single source of truth) ----------
+def build_map(
+    center,
+    zoom,
+    data,
+    user_location=None,
+    station_location=None,
+    station_popup="",
+    route_coords=None,
+    route_tooltip="",
+):
+    m = folium.Map(
+        location=center,
+        zoom_start=zoom,
+        tiles=TILES_URL,
+        attr=MAP_ATTR,
+        max_zoom=20,
+    )
 
     for _, row in data.iterrows():
         color = get_marker_color(row["num_bikes_available"])
@@ -91,22 +106,78 @@ def build_map(center, zoom, data, user_location=None, station_location=None,
         ).add_to(m)
 
     if route_coords:
-        folium.PolyLine(locations=route_coords, color="blue", weight=5,
-                        tooltip=route_tooltip).add_to(m)
-
+        folium.PolyLine(
+            locations=route_coords,
+            color="blue",
+            weight=5,
+            tooltip=route_tooltip,
+        ).add_to(m)
     return m
 
+# ---------- Nearest stations helper ----------
+def nearest_stations_table(df, origin, n=5):
+    """Return the n nearest stations to `origin` as a display-ready DataFrame."""
+    work = df.copy()
+    work["distance_km"] = work.apply(
+        lambda row: geodesic(origin, (row["lat"], row["lon"])).km, axis=1
+    )
+    work = work.sort_values("distance_km").head(n)
+
+    cols = ["station_id", "name", "distance_km",
+            "num_bikes_available", "ebike", "mechanical",
+            "num_docks_available"]
+    # Guard: drop 'name' if it doesn't exist in the data
+    cols = [c for c in cols if c in work.columns]
+
+    rename_map = {
+        "station_id": "Station ID",
+        "name": "Station Name",
+        "distance_km": "Distance (km)",
+        "num_bikes_available": "Bikes",
+        "ebike": "E-Bikes",
+        "mechanical": "Mechanical",
+        "num_docks_available": "Empty Docks",
+    }
+    result = work[cols].rename(columns=rename_map).reset_index(drop=True)
+
+    if "Distance (km)" in result.columns:
+        result["Distance (km)"] = result["Distance (km)"].round(2)
+    return result
+
+# ---------- Footer ----------
+def render_footer():
+    st.markdown(
+        """
+        <style>
+        .footer-links a {
+            color: #2563eb; text-decoration: none;
+            font-weight: 600; margin: 0 4px;
+        }
+        .footer-links a:hover { text-decoration: underline; }
+        </style>
+        ---
+        <div style='text-align:right; color:#888; font-size:13px; line-height:1.6;'>
+            Designed &amp; developed by <strong><b>Arindam S</b></strong><br>
+            <span class='footer-links'>
+                <a href='https://github.com/YOUR_USERNAME' target='_blank'>GitHub</a> ·
+                <a href='https://www.linkedin.com/in/YOUR_HANDLE' target='_blank'>LinkedIn</a> ·
+                <a href='mailto:you@example.com'>Email</a>
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # ---------- Header ----------
-st.title("🚲 Toronto Bike-Share Finder")
-st.markdown("Find the nearest available bike or dock in Toronto — live.")
+st.title("🚲 Toronto Bike-Sharing System")
+st.caption("Live data · Toronto Bike Share GBFS · Refreshes every 60 seconds")
 
 # ---------- Data ----------
 data = load_data()
 if data is None or data.empty:
     st.stop()
 
-# ---------- Metrics ----------
+# ---------- Top metrics ----------
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric("Bikes Available Now", int(data["num_bikes_available"].sum()))
@@ -115,7 +186,8 @@ with col2:
     st.metric("Stations with Bikes", int((data["num_bikes_available"] > 0).sum()))
     st.metric("Stations with E-Bikes", int((data["ebike"] > 0).sum()))
 with col3:
-    st.metric("Stations with Empty Docks", int((data["num_docks_available"] > 0).sum()))
+    st.metric("Stations with Empty Docks",
+              int((data["num_docks_available"] > 0).sum()))
 
 # ---------- Session state ----------
 st.session_state.setdefault("iamhere", None)
@@ -145,16 +217,33 @@ with st.sidebar:
         input_city = st.text_input("City", "Toronto")
         input_country = st.text_input("Country", "Canada")
 
-        if st.button("Find me a Bike", type="primary"):
+        find_col, reset_col = st.columns([2, 1])
+        with find_col:
+            find_clicked = st.button(
+                "Find me a Bike", type="primary", use_container_width=True
+            )
+        with reset_col:
+            reset_clicked = st.button(
+                "🔄 Reset", use_container_width=True
+            )
+
+        if find_clicked:
             if not input_street.strip():
                 st.error("Please enter a street address.")
             else:
                 with st.spinner("Locating address…"):
-                    loc = geocode(f"{input_street} {input_city} {input_country}")
+                    loc = geocode(
+                        f"{input_street} {input_city} {input_country}"
+                    )
                 if not loc:
                     st.error("Address not found. Please check your input.")
                 else:
                     st.session_state.iamhere = loc
+
+        if reset_clicked:
+            st.session_state.iamhere = None
+            st.session_state.iamhere_to_return = None
+            st.rerun()
 
     elif bike_method == "Return":
         st.header("Where are you located?")
@@ -162,30 +251,44 @@ with st.sidebar:
         input_city = st.text_input("City", "Toronto")
         input_country = st.text_input("Country", "Canada")
 
-        if st.button("Find me a Dock", type="primary"):
+        find_col, reset_col = st.columns([2, 1])
+        with find_col:
+            find_clicked = st.button(
+                "Find me a Dock", type="primary", use_container_width=True
+            )
+        with reset_col:
+            reset_clicked = st.button(
+                "🔄 Reset", use_container_width=True
+            )
+
+        if find_clicked:
             if not input_street_return.strip():
                 st.error("Please enter a street address.")
             else:
                 with st.spinner("Locating address…"):
-                    loc = geocode(f"{input_street_return} {input_city} {input_country}")
+                    loc = geocode(
+                        f"{input_street_return} {input_city} {input_country}"
+                    )
                 if not loc:
                     st.error("Address not found. Please check your input.")
                 else:
                     st.session_state.iamhere_to_return = loc
-    st.divider()
-    if st.button("🔄 Reset search"):
-        st.session_state.iamhere = None
-        st.session_state.iamhere_to_return = None
-        st.rerun()
+
+        if reset_clicked:
+            st.session_state.iamhere = None
+            st.session_state.iamhere_to_return = None
+            st.rerun()
 
 # ---------- Map rendering ----------
 iamhere = st.session_state.iamhere
 iamhere_to_return = st.session_state.iamhere_to_return
 
+# Default Toronto view (no address entered yet)
 if bike_method in ("Rent", "Return") and not iamhere and not iamhere_to_return:
     m = build_map(TORONTO_CENTER, DEFAULT_ZOOM_CITY, data)
     folium_static(m, width=1400)
 
+# Rent flow
 elif bike_method == "Rent" and iamhere:
     try:
         with st.spinner("Finding the best bike for you…"):
@@ -209,6 +312,14 @@ elif bike_method == "Rent" and iamhere:
     with col3:
         st.metric(":green[Travel Time]", f"{duration} min")
 
+    st.subheader("📍 5 Nearest Stations")
+    st.dataframe(
+        nearest_stations_table(data, iamhere),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+# Return flow
 elif bike_method == "Return" and iamhere_to_return:
     try:
         with st.spinner("Finding the best dock for you…"):
@@ -232,27 +343,12 @@ elif bike_method == "Return" and iamhere_to_return:
     with col3:
         st.metric(":green[Travel Time]", f"{duration} min")
 
-# ---------- Bottom-right footer ----------
-st.markdown(
-    """
-    <style>
-    .footer-links a {
-        color: #2563eb;
-        text-decoration: none;
-        font-weight: 600;
-        margin: 0 4px;
-    }
-    .footer-links a:hover { text-decoration: underline; }
-    </style>
-    ---
-    <div style='text-align:right; color:#888; font-size:13px; line-height:1.6;'>
-        Designed &amp; developed by <strong><b>Arindam S</b></strong><br>
-        <span class='footer-links'>
-            <a href='https://github.com/Arindam-18s' target='_blank'>GitHub</a> ·
-            <a href='https://www.linkedin.com/in/arindam-samadder' target='_blank'>LinkedIn</a> ·
-            <a href='arindam.samadder18@gmail.com'>Email</a>
-        </span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    st.subheader("📍 5 Nearest Stations")
+    st.dataframe(
+        nearest_stations_table(data, iamhere_to_return),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+# ---------- Footer ----------
+render_footer()

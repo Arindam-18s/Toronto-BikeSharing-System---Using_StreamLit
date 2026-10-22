@@ -7,7 +7,6 @@ import streamlit as st
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 
-
 @st.cache_data(ttl=60)
 def query_station_status(url):
     with urllib.request.urlopen(url, timeout=10) as data_url:
