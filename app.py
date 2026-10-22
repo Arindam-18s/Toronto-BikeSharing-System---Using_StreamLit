@@ -172,6 +172,11 @@ with st.sidebar:
                     st.error("Address not found. Please check your input.")
                 else:
                     st.session_state.iamhere_to_return = loc
+    st.divider()
+    if st.button("🔄 Reset search"):
+        st.session_state.iamhere = None
+        st.session_state.iamhere_to_return = None
+        st.rerun()
 
 # ---------- Map rendering ----------
 iamhere = st.session_state.iamhere

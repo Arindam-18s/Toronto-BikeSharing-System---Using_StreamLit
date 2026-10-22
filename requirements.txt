@@ -4,3 +4,4 @@ streamlit-folium>=0.22
 pandas>=2.2
 requests>=2.32
 geopy>=2.4
+pytest
