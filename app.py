@@ -180,7 +180,7 @@ def render_footer():
     )
 
 # ---------- Header ----------
-st.title("🚲 Toronto Bike-Sharing System")
+st.title("🚲 Toronto Bike-Sharing System - Dashboard")
 st.caption("Live data · Toronto Bike Share GBFS · Refreshes every 60 seconds")
 
 # ---------- Data ----------
