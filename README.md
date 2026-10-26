@@ -11,9 +11,8 @@ A live, interactive Streamlit app that helps you find the nearest available
 bike — or the nearest empty dock — in Toronto's Bike Share network, with
 travel-time routing straight to your destination.
 
-**🔗 Live demo:** https://your-app-name.streamlit.app
-
-![Screenshot](docs/screenshot.png)
+**🔗 Live demo:** https://toronto-mobility-live-analytics.streamlit.app/
+![Screenshot] : To be Added
 
 ---
 
