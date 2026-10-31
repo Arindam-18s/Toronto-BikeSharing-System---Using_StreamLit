@@ -57,7 +57,7 @@ def get_marker_color(num_bikes_available):
 
 
 def geocode(address):
-    geolocator = Nominatim(user_agent="bike-share-app")
+    geolocator = Nominatim(user_agent="toronto_bikeshare_arindam-18s_v1.1")
     try:
         location = geolocator.geocode(address, timeout=10)
     except Exception:
