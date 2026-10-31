@@ -57,14 +57,32 @@ def get_marker_color(num_bikes_available):
 
 
 def geocode(address):
-    geolocator = Nominatim(user_agent="toronto_bikeshare_arindam-18s_v1.1")
+    api_key = st.secrets.get("GEOAPIFY_API_KEY", "")
+    if not api_key:
+        return None
+
+    url = "https://api.geoapify.com/v1/geocode/search"      # Geoapify Geocoding API endpoint
+    params = {
+        "text": address,
+        "format": "json",
+        "limit": 1, 
+        "apiKey": api_key
+    }
     try:
-        location = geolocator.geocode(address, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status() # Raises an exception for HTTP errors
+        data = response.json()
+        if data.get("results") and len(data["results"]) > 0:
+            result = data["results"][0]
+            return (result["lat"], result["lon"])
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"Geocoding API error: {e}")
+        pass
     except Exception:
-        return None
-    if location is None:
-        return None
-    return (location.latitude, location.longitude)
+        pass
+
+    return None
 
 
 def _closest_station(df):
