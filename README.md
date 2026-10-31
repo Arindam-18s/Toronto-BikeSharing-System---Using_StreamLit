@@ -12,7 +12,9 @@ bike — or the nearest empty dock — in Toronto's Bike Share network, with
 travel-time routing straight to your destination.
 
 **🔗 Live demo:** https://toronto-mobility-live-analytics.streamlit.app/
-![Screenshot] : To be Added
+![Screenshot] : 
+<img width="1918" height="967" alt="Screenshot 2026-10-31 223602" src="https://github.com/user-attachments/assets/31864e42-ea9e-41b3-9673-53fd5f23ffdb" />
+<img width="1915" height="970" alt="Screenshot 2026-10-31 223531" src="https://github.com/user-attachments/assets/4f96d725-8db3-4d3e-ab07-3c2391a8450a" />
 
 ---
 
